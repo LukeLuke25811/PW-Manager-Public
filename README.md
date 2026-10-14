@@ -17,3 +17,5 @@ nachdem du sie verlassen hast.
 
 `vendor/argon2.umd.min.js` ist [hash-wasm](https://github.com/Daninet/hash-wasm) 4.12.0
 (MIT-Lizenz, siehe `vendor/hash-wasm-LICENSE.txt`).
+
+Veröffentlicht wird der Branch `gh-pages`. Neue Versionen dorthin pushen.
