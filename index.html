@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="theme-color" content="#2f6fde">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="PW-Manager">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>PW-Manager</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <link rel="stylesheet" href="style.css">
+  <script src="vendor/argon2.umd.min.js"></script>
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <!-- Unlock -->
+  <main id="unlock-view" class="view center" hidden>
+    <img src="icon.svg" alt="" class="logo">
+    <h1>PW-Manager</h1>
+
+    <form id="unlock-form" class="card" autocomplete="off">
+      <p id="file-info" class="muted"></p>
+      <label for="master">Master-Passwort</label>
+      <input id="master" type="password" autocomplete="off" autocapitalize="off"
+             autocorrect="off" spellcheck="false" required>
+      <p id="unlock-error" class="error" role="alert" hidden></p>
+      <button id="unlock-btn" type="submit" class="primary">Entsperren</button>
+      <button id="change-file" type="button" class="link">Andere Tresordatei wählen</button>
+    </form>
+
+    <div id="choose-card" class="card">
+      <p>Wähle deine Tresordatei <b>vault.pwmv</b> (oder ein verschlüsseltes Backup davon),
+        z.&nbsp;B. aus iCloud Drive oder OneDrive.</p>
+      <label class="primary button">
+        Tresordatei wählen
+        <input id="file-input" type="file" hidden>
+      </label>
+      <label class="check">
+        <input id="remember" type="checkbox" checked>
+        Verschlüsselte Datei auf diesem Gerät merken
+      </label>
+      <p id="choose-error" class="error" role="alert" hidden></p>
+    </div>
+
+    <p class="muted small">Alles bleibt auf diesem Gerät. Die Datei wird nur hier entschlüsselt
+      und nirgendwohin gesendet.</p>
+  </main>
+
+  <!-- Entry list -->
+  <main id="list-view" class="view" hidden>
+    <header class="bar">
+      <input id="search" type="search" placeholder="Suchen" autocomplete="off"
+             autocapitalize="off" autocorrect="off" spellcheck="false">
+      <button id="lock-btn" type="button" class="icon-btn" aria-label="Sperren" title="Sperren">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+      </button>
+    </header>
+    <nav id="filters" class="chips" aria-label="Filter"></nav>
+    <ul id="entries" class="entries"></ul>
+    <p id="empty" class="muted center-text" hidden></p>
+    <p id="stale" class="muted small center-text"></p>
+  </main>
+
+  <!-- Entry detail -->
+  <main id="detail-view" class="view" hidden>
+    <header class="bar">
+      <button id="back-btn" type="button" class="link back">‹ Zurück</button>
+      <h2 id="d-title"></h2>
+    </header>
+    <div class="card fields">
+      <div class="field" id="f-username">
+        <span class="label">Benutzername</span>
+        <span class="value" id="d-username"></span>
+        <button type="button" class="copy" data-copy="username">Kopieren</button>
+      </div>
+      <div class="field" id="f-password">
+        <span class="label">Passwort</span>
+        <span class="value mono" id="d-password"></span>
+        <button type="button" id="reveal" class="secondary">Zeigen</button>
+        <button type="button" class="copy" data-copy="password">Kopieren</button>
+      </div>
+      <div class="field" id="f-url">
+        <span class="label">Website</span>
+        <a class="value" id="d-url" target="_blank" rel="noopener noreferrer"></a>
+      </div>
+      <div class="field" id="f-category">
+        <span class="label">Kategorie</span>
+        <span class="value" id="d-category"></span>
+      </div>
+      <div class="field" id="f-notes">
+        <span class="label">Notizen</span>
+        <span class="value notes" id="d-notes"></span>
+      </div>
+    </div>
+  </main>
+
+  <div id="toast" class="toast" role="status" hidden></div>
+</body>
+</html>
