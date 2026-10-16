@@ -19,6 +19,7 @@ const LIMITS = {
 
 export class VaultError extends Error {}
 export class WrongPassword extends VaultError {}
+export class PasswordChanged extends VaultError {}
 
 function b64d(text) {
   if (typeof text !== "string" || !/^[A-Za-z0-9+/]*={0,2}$/.test(text) || text.length % 4) {
@@ -109,19 +110,57 @@ async function deriveKey(password, params) {
   });
 }
 
+/**
+ * Unlock a .pwmv file. Returns {payload, session}; the session holds the
+ * derived key (non-extractable) so changes can be saved without asking again.
+ */
+export async function unlockVault(text, password) {
+  const { doc, params } = readHeader(text);
+  const rawKey = await deriveKey(password, params);
+  const key = await crypto.subtle.importKey("raw", rawKey, "AES-GCM", false, ["encrypt", "decrypt"]);
+  rawKey.fill(0);
+  const session = { key, params };
+  return { payload: await decryptDoc(doc, session), session };
+}
+
+/** Decrypt the text of a .pwmv file with an already unlocked session. */
+export async function decryptWithSession(text, session) {
+  const { doc, params } = readHeader(text);
+  if (!sameParams(params, session.params)) {
+    throw new PasswordChanged("Das Master-Passwort wurde auf einem anderen Gerät geändert.");
+  }
+  return decryptDoc(doc, session);
+}
+
 /** Decrypt the text of a .pwmv file. Returns the payload {entries, settings, categories}. */
 export async function decryptVault(text, password) {
-  const { doc, params } = readHeader(text);
+  return (await unlockVault(text, password)).payload;
+}
+
+/** Encrypt a payload into the full text of a .pwmv file (same format as crypto.py). */
+export async function encryptVault(payload, session) {
+  const hdr = header(session.params);
+  const nonce = crypto.getRandomValues(new Uint8Array(12));
+  const plain = new TextEncoder().encode(JSON.stringify(payload));
+  const aad = new TextEncoder().encode(canonicalJson(hdr));
+  const ct = new Uint8Array(await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv: nonce, additionalData: aad, tagLength: 128 }, session.key, plain));
+  return JSON.stringify({ ...hdr, nonce: b64e(nonce), data: b64e(ct) }, null, 2);
+}
+
+function sameParams(a, b) {
+  return a.iterations === b.iterations && a.memory_kib === b.memory_kib && a.lanes === b.lanes
+    && b64e(a.salt) === b64e(b.salt);
+}
+
+async function decryptDoc(doc, session) {
   const nonce = b64d(doc.nonce);
   const ciphertext = b64d(doc.data);
-  const rawKey = await deriveKey(password, params);
-  const key = await crypto.subtle.importKey("raw", rawKey, "AES-GCM", false, ["decrypt"]);
-  rawKey.fill(0);
-  const aad = new TextEncoder().encode(canonicalJson(header(params)));
+  const aad = new TextEncoder().encode(canonicalJson(header(session.params)));
   let plain;
   try {
     plain = await crypto.subtle.decrypt(
-      { name: "AES-GCM", iv: nonce, additionalData: aad, tagLength: 128 }, key, ciphertext);
+      { name: "AES-GCM", iv: nonce, additionalData: aad, tagLength: 128 }, session.key, ciphertext);
   } catch {
     throw new WrongPassword("Falsches Master-Passwort.");
   }

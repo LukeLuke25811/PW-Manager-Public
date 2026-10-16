@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta http-equiv="Content-Security-Policy"
-        content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+        content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://api.dropboxapi.com https://content.dropboxapi.com; object-src 'none'; base-uri 'none'; form-action 'none'">
   <meta name="referrer" content="no-referrer">
   <meta name="theme-color" content="#2f6fde">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -20,7 +20,7 @@
   <script type="module" src="app.js"></script>
 </head>
 <body>
-  <!-- Unlock -->
+  <!-- Start: unlock, or choose where the vault comes from -->
   <main id="unlock-view" class="view center" hidden>
     <img src="icon.svg" alt="" class="logo">
     <h1>PW-Manager</h1>
@@ -32,25 +32,56 @@
              autocorrect="off" spellcheck="false" required>
       <p id="unlock-error" class="error" role="alert" hidden></p>
       <button id="unlock-btn" type="submit" class="primary">Entsperren</button>
-      <button id="change-file" type="button" class="link">Andere Tresordatei wählen</button>
+      <button id="change-source" type="button" class="link">Andere Quelle wählen</button>
     </form>
 
-    <div id="choose-card" class="card">
-      <p>Wähle deine Tresordatei <b>vault.pwmv</b> (oder ein verschlüsseltes Backup davon),
+    <div id="source-card" class="card">
+      <div id="dropbox-choice">
+        <p><b>Mit Dropbox abgleichen:</b> Änderungen am PC und am iPhone landen automatisch
+          im selben Tresor.</p>
+        <button id="dropbox-start" type="button" class="primary">Mit Dropbox verbinden</button>
+        <hr>
+      </div>
+      <p><b>Nur lesen:</b> eine Kopie deiner Tresordatei <b>vault.pwmv</b> öffnen,
         z.&nbsp;B. aus iCloud Drive oder OneDrive.</p>
-      <label class="primary button">
+      <label class="secondary button wide">
         Tresordatei wählen
         <input id="file-input" type="file" hidden>
       </label>
-      <label class="check">
-        <input id="remember" type="checkbox" checked>
-        Verschlüsselte Datei auf diesem Gerät merken
-      </label>
-      <p id="choose-error" class="error" role="alert" hidden></p>
+      <p id="source-error" class="error" role="alert" hidden></p>
     </div>
 
-    <p class="muted small">Alles bleibt auf diesem Gerät. Die Datei wird nur hier entschlüsselt
-      und nirgendwohin gesendet.</p>
+    <p class="muted small">Die Tresordatei bleibt verschlüsselt und wird nur auf diesem Gerät
+      entschlüsselt. Dein Master-Passwort verlässt das Gerät nie.</p>
+  </main>
+
+  <!-- Dropbox sign-in -->
+  <main id="connect-view" class="view" hidden>
+    <header class="bar">
+      <button id="connect-back" type="button" class="link back">‹ Zurück</button>
+      <h2>Dropbox verbinden</h2>
+    </header>
+    <div class="card steps">
+      <p><b>1.</b> Bei Dropbox anmelden und den Zugriff erlauben. Die App sieht nur ihren
+        eigenen Ordner <b>Apps</b> in deiner Dropbox.</p>
+      <a id="connect-link" class="primary button" target="_blank" rel="noopener noreferrer">Bei Dropbox anmelden</a>
+      <p><b>2.</b> Dropbox zeigt danach einen Code. Kopiere ihn, komm hierher zurück und füge ihn ein.</p>
+      <input id="connect-code" type="text" placeholder="Code einfügen" autocomplete="off"
+             autocapitalize="off" autocorrect="off" spellcheck="false">
+      <button id="connect-btn" type="button" class="primary">Verbinden</button>
+      <p id="connect-error" class="error" role="alert" hidden></p>
+    </div>
+    <div id="upload-card" class="card" hidden>
+      <p>In deiner Dropbox liegt noch kein Tresor. Wähle eine Kopie deiner Tresordatei
+        (<b>vault.pwmv</b> oder ein verschlüsseltes Backup), sie wird in Dropbox gespeichert.</p>
+      <label class="primary button">
+        Tresordatei hochladen
+        <input id="upload-input" type="file" hidden>
+      </label>
+      <p class="muted small">Oder am PC: <b>File → Save encrypted backup</b> in den Ordner
+        Dropbox › Apps › (Name deiner App) als <b>vault.pwmv</b> speichern.</p>
+      <p id="upload-error" class="error" role="alert" hidden></p>
+    </div>
   </main>
 
   <!-- Entry list -->
@@ -58,14 +89,18 @@
     <header class="bar">
       <input id="search" type="search" placeholder="Suchen" autocomplete="off"
              autocapitalize="off" autocorrect="off" spellcheck="false">
+      <button id="add-btn" type="button" class="icon-btn" aria-label="Neuer Eintrag" title="Neuer Eintrag">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
       <button id="lock-btn" type="button" class="icon-btn" aria-label="Sperren" title="Sperren">
         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
       </button>
     </header>
+    <p id="sync-banner" class="banner" role="status" hidden></p>
     <nav id="filters" class="chips" aria-label="Filter"></nav>
     <ul id="entries" class="entries"></ul>
     <p id="empty" class="muted center-text" hidden></p>
-    <p id="stale" class="muted small center-text"></p>
+    <p id="source-info" class="muted small center-text"></p>
   </main>
 
   <!-- Entry detail -->
@@ -73,6 +108,7 @@
     <header class="bar">
       <button id="back-btn" type="button" class="link back">‹ Zurück</button>
       <h2 id="d-title"></h2>
+      <button id="edit-btn" type="button" class="link edit">Bearbeiten</button>
     </header>
     <div class="card fields">
       <div class="field" id="f-username">
@@ -99,6 +135,36 @@
         <span class="value notes" id="d-notes"></span>
       </div>
     </div>
+  </main>
+
+  <!-- Add / edit -->
+  <main id="edit-view" class="view" hidden>
+    <header class="bar">
+      <button id="edit-cancel" type="button" class="link back">Abbrechen</button>
+      <h2 id="e-heading">Eintrag</h2>
+      <button id="edit-save" type="submit" form="edit-form" class="link edit">Sichern</button>
+    </header>
+    <form id="edit-form" class="card form" autocomplete="off">
+      <label for="e-title">Name</label>
+      <input id="e-title" type="text" required autocapitalize="sentences">
+      <label for="e-username">Benutzername</label>
+      <input id="e-username" type="text" autocapitalize="off" autocorrect="off" spellcheck="false">
+      <label for="e-password">Passwort</label>
+      <div class="row">
+        <input id="e-password" type="text" class="mono" autocapitalize="off" autocorrect="off" spellcheck="false">
+        <button id="e-generate" type="button" class="secondary">Erzeugen</button>
+      </div>
+      <label for="e-url">Website</label>
+      <input id="e-url" type="url" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false">
+      <label for="e-category">Kategorie</label>
+      <input id="e-category" type="text" list="category-list">
+      <datalist id="category-list"></datalist>
+      <label for="e-notes">Notizen</label>
+      <textarea id="e-notes" rows="4"></textarea>
+      <label class="check"><input id="e-favorite" type="checkbox"> Favorit</label>
+      <p id="edit-error" class="error" role="alert" hidden></p>
+      <button id="delete-btn" type="button" class="danger">Eintrag löschen</button>
+    </form>
   </main>
 
   <div id="toast" class="toast" role="status" hidden></div>

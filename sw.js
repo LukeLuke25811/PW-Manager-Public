@@ -1,9 +1,10 @@
-// Caches the app's own files so it opens offline. The vault itself is never
-// fetched over the network, so nothing secret passes through here.
-const CACHE = "pwm-web-v1";
+// Caches the app's own files so it opens offline. Requests to other sites
+// (Dropbox) are left alone and never cached.
+const CACHE = "pwm-web-v2";
 const FILES = [
   "./", "index.html", "app.js", "vault.js", "style.css", "manifest.webmanifest",
-  "icon.svg", "icon-180.png", "icon-512.png", "vendor/argon2.umd.min.js",
+  "sync.js", "cloud.js", "config.js", "generator.js", "icon.svg", "icon-180.png", "icon-512.png",
+  "vendor/argon2.umd.min.js",
 ];
 
 self.addEventListener("install", (ev) => {
